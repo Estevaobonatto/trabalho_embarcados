@@ -10,7 +10,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"uno-api/internal/game"
-	"uno-api/internal/model"
 	"uno-api/internal/replication"
 )
 

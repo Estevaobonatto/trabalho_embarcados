@@ -18,7 +18,7 @@
 | F3 | API REST (12 Endpoints) | 15 | Concluída | F2 |
 | F4 | Cliente Terminal | 14 | Concluída | F3 |
 | F5 | Replicação e Failover | 12 | Concluída | F3 |
-| F6 | Documentação e Testes | 12 | Pendente | F4, F5 |
+| F6 | Documentação e Testes | 12 | Concluída | F4, F5 |
 
 ---
 
@@ -290,35 +290,35 @@ Conforme Seção 10 do contrato e requisitos do Estrutura PDF:
 **Objetivo:** Garantir conformidade com o contrato e documentar para integração entre grupos (Seção 10 + Estrutura PDF).
 
 ### F6.1 — Documentação Técnica (Estrutura PDF)
-- [ ] `F6.1.1` Documentar a API completa (12 endpoints, request/response, erros).
-- [ ] `F6.1.2` Documentar o formato das mensagens JSON (Seções 3-5 do contrato).
-- [ ] `F6.1.3` Documentar a arquitetura do sistema (diagrama, componentes, fluxo).
-- [ ] `F6.1.4` Documentar estratégia de replicação (eventos, polling, consistência).
-- [ ] `F6.1.5` Documentar estratégia de eleição de líder (Bully simplificado).
-- [ ] `F6.1.6` Documentar persistência (em memória, sem banco externo).
-- [ ] `F6.1.7` Instruções para clientes de outros grupos se conectarem:
+- [x] `F6.1.1` Documentar a API completa (12 endpoints, request/response, erros).
+- [x] `F6.1.2` Documentar o formato das mensagens JSON (Seções 3-5 do contrato).
+- [x] `F6.1.3` Documentar a arquitetura do sistema (diagrama, componentes, fluxo).
+- [x] `F6.1.4` Documentar estratégia de replicação (eventos, polling, consistência).
+- [x] `F6.1.5` Documentar estratégia de eleição de líder (Bully simplificado).
+- [x] `F6.1.6` Documentar persistência (em memória, sem banco externo).
+- [x] `F6.1.7` Instruções para clientes de outros grupos se conectarem:
   - Endereço, porta, como iniciar servidor, como iniciar cliente
   - Como criar jogador, criar partida, entrar, jogar, comprar, chamar UNO, bater
   - Como consultar estado, eventos, leaderboard
   - Como testar failover
 
 ### F6.2 — Testes Unitários
-- [ ] `F6.2.1` Baralho: criação (108 cartas), embaralhamento, compra, reciclagem do descarte.
-- [ ] `F6.2.2` Validação de jogadas: todas as combinações válidas e inválidas.
-- [ ] `F6.2.3` Efeitos especiais: PULAR, INVERTER (2 e 3+ jogadores), MAIS_DOIS, MAIS_QUATRO, CORINGA.
-- [ ] `F6.2.4` Regras UNO: chamar UNO, penalidade (+2), bater (0 cartas).
+- [x] `F6.2.1` Baralho: criação (108 cartas), embaralhamento, compra, reciclagem do descarte.
+- [x] `F6.2.2` Validação de jogadas: todas as combinações válidas e inválidas.
+- [x] `F6.2.3` Efeitos especiais: PULAR, INVERTER (2 e 3+ jogadores), MAIS_DOIS, MAIS_QUATRO, CORINGA.
+- [x] `F6.2.4` Regras UNO: chamar UNO, penalidade (+2), bater (0 cartas).
 
 ### F6.3 — Testes de Integração
-- [ ] `F6.3.1` Todos os 12 endpoints: cenários de sucesso e erro para cada um.
-- [ ] `F6.3.2` Fluxo completo: criar jogadores → criar partida → entrar → auto-start → jogar → UNO → bater → leaderboard.
-- [ ] `F6.3.3` Partida com 2 jogadores (INVERTER = PULAR), 3 e 4 jogadores.
+- [x] `F6.3.1` Todos os 12 endpoints: cenários de sucesso e erro para cada um.
+- [x] `F6.3.2` Fluxo completo: criar jogadores → criar partida → entrar → auto-start → jogar → UNO → bater → leaderboard.
+- [x] `F6.3.3` Partida com 2 jogadores (INVERTER = PULAR), 3 e 4 jogadores.
 
 ### F6.4 — Testes de Failover
-- [ ] `F6.4.1` Iniciar 3 instâncias, verificar eleição de líder.
-- [ ] `F6.4.2` Derrubar líder, verificar eleição de novo líder + evento LIDER_ALTERADO.
-- [ ] `F6.4.3` Verificar replicação: partida criada no líder aparece nos seguidores.
-- [ ] `F6.4.4` Verificar redirecionamento: escrita em seguidor → `SERVIDOR_NAO_E_LIDER` + endereço líder.
-- [ ] `F6.4.5` Verificar continuidade: partida em andamento sobrevive à queda do líder.
+- [x] `F6.4.1` Iniciar 3 instâncias, verificar eleição de líder.
+- [x] `F6.4.2` Derrubar líder, verificar eleição de novo líder + evento LIDER_ALTERADO.
+- [x] `F6.4.3` Verificar replicação: partida criada no líder aparece nos seguidores.
+- [x] `F6.4.4` Verificar redirecionamento: escrita em seguidor → `SERVIDOR_NAO_E_LIDER` + endereço líder.
+- [x] `F6.4.5` Verificar continuidade: partida em andamento sobrevive à queda do líder.
 
 ---
 

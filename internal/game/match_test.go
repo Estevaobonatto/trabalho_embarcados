@@ -296,8 +296,8 @@ func TestInverterCom2Jogadores(t *testing.T) {
 	if err != nil {
 		t.Fatalf("jogar inverter devia funcionar: %v", err)
 	}
-	if res.ProximoJogador == vez {
-		t.Error("com 2 jogadores, inverter devia pular o oponente")
+	if res.ProximoJogador != vez {
+		t.Error("com 2 jogadores, inverter devia pular o oponente (proximo = mesmo jogador)")
 	}
 }
 

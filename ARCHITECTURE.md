@@ -372,45 +372,61 @@ IniciarPartida(gameId):
 
 ---
 
-## 7. Arquitetura de Failover
+## 7. Arquitetura de Failover (Implementado)
 
 ### 7.1 Cluster e Eleição de Líder
 
-**Algoritmo:** Bully simplificado (maior servidorId vivo vence)
+**Algoritmo:** Bully simplificado — maior `servidorId` ativo vence.
 
+**Fluxo:**
+1. Cada servidor lê a lista de peers da variável de ambiente `PEERS`
+2. Na inicialização, cada servidor se declara líder temporariamente
+3. Após 4s, eleição inicial: consulta peers ativos, maior ID vence
+4. Heartbeat a cada 2s: GET /servidor em cada peer para verificar saúde
+5. Timeout de 6s sem resposta → peer marcado inativo
+6. Se líder inativo OU peer com ID superior detectado → nova eleição
+7. Eleição bem-sucedida → registra evento `LIDER_ALTERADO`
+
+**Estrutura ClusterState:**
 ```
-Cada servidor:
-  - Conhece lista de peers (env PEERS)
-  - Envia heartbeat (GET /servidor) a cada 2s para todos os peers
-  - Timeout de 6s sem resposta → peer considerado morto
-  - Se líder morreu → inicia eleição:
-    1. Pergunta a todos os peers vivos qual o maior servidorId
-    2. Se este servidor for o maior → torna-se líder
-    3. Emite evento LIDER_ALTERADO
-  - Se recebe heartbeat de servidor com ID maior que o líder atual:
-    Aceita novo líder
+ClusterState {
+    ServidorID, Endereco       // este servidor
+    Peers map[URL]*PeerInfo    // peers conhecidos
+    IsLider, LiderID, EnderecoLider  // estado da liderança
+    PM *PartidaManager         // referência ao estado do jogo
+}
 ```
 
 ### 7.2 Replicação de Estado
 
-**Fonte da verdade:** Sequência de eventos.
+**Mecanismo:** Snapshot completo via polling (não replay de eventos individuais).
 
+**Fluxo (seguidor a cada 2s):**
+1. `GET /_replicacao/jogos` no líder → lista de {gameId, versaoEstado}
+2. Para cada jogo com versão superior à local: `GET /_replicacao/jogos/{gameId}` → `JogoSnapshot` completo
+3. `ImportarSnapshot()` → reconstrói estado local (jogadores, mãos, baralho, eventos)
+4. `GET /leaderboard` no líder → sincroniza vitórias dos jogadores
+
+**Endpoints internos de replicação** (prefixo `/_replicacao`, não fazem parte dos 12 endpoints públicos):
+- `GET /_replicacao/jogos` — lista de jogos com versão
+- `GET /_replicacao/jogos/{gameId}` — snapshot completo do jogo (inclui mãos)
+
+**Estrutura JogoSnapshot:**
 ```
-Seguidor reconcilia estado:
-  1. A cada 1s, faz GET /jogos/{gameId}/eventos?desde=ultimaSequenciaLocal
-  2. Para cada evento novo recebido:
-     - Aplica o evento ao estado local (replay determinístico)
-     - Atualiza ultimaSequenciaLocal
-  3. Se evento for FAILOVER ou LIDER_ALTERADO:
-     - Atualiza estado do cluster
+JogoSnapshot {
+    gameId, status, versaoEstado, jogadorDaVez, sentido, corAtual
+    cartaTopo, monteCompra[], monteDescarte[], eventos[], vencedor
+    jogadores[] { jogadorId, nome, vitorias, mao[], chamouUno }
+}
 ```
 
 ### 7.3 Estratégia de Consistência
 
-- **Escrita sempre no líder:** POST /jogarCarta, POST /comprar, etc.
-- **Leitura local:** GET /estado, GET /eventos podem ser respondidos por seguidores (eventualmente consistentes)
-- **Redirecionamento:** Se seguidor recebe POST de escrita e há líder conhecido, retorna `SERVIDOR_NAO_E_LIDER` com `enderecoLider` no campo `dados`
-- **Split-brain não tratado** (assume-se rede confiável entre servidores)
+- **Escrita sempre no líder:** Middleware `LiderMiddleware` bloqueia POST em seguidores → HTTP 409 `SERVIDOR_NAO_E_LIDER` + `enderecoLider`
+- **Leitura local:** GET /estado, GET /eventos, GET /jogos, GET /leaderboard disponíveis localmente (consistência eventual, ~2s de atraso)
+- **Leaderboard compartilhado:** Seguidores sincronizam vitórias do líder a cada 2s. Dados consolidados entre servidores do grupo.
+- **Continuidade após failover:** Se líder cai, seguidor com estado mais recente é eleito. Partida continua do último snapshot replicado.
+- **Contadores resilientes:** `ImportarSnapshot` ajusta contadores locais (`contadorJogador`, `contadorJogo`) para evitar conflitos de ID.
 
 ---
 
