@@ -42,8 +42,11 @@ func (t *Terminal) Run() {
 
 func (t *Terminal) exibirCabecalho() {
 	fmt.Println("========================================")
-	fmt.Println("  UNO - Terminal")
-	fmt.Printf("  Servidor: %s\n", t.API.BaseURL)
+	fmt.Println("  UNO - Terminal (V2)")
+	fmt.Printf("  Servidor ativo: %s\n", t.API.ActiveURL())
+	if len(t.API.Servers) > 1 {
+		fmt.Printf("  Servidores configurados: %v\n", t.API.Servers)
+	}
 	if t.Session.TemJogador() {
 		fmt.Printf("  Jogador: %s (%s)\n", t.Session.Nome, t.Session.JogadorId)
 	}
@@ -355,17 +358,18 @@ func (t *Terminal) cmdStatus() {
 	fmt.Printf("Status: %s | Lider: %v\n", srv.Status, srv.Lider)
 	fmt.Printf("Endereco lider: %s\n", srv.EnderecoLider)
 	fmt.Printf("Versao estado: %d\n", srv.VersaoEstadoAtual)
+	fmt.Printf("Este cliente esta conectado em: %s\n", t.API.ActiveURL())
 }
 
 func (t *Terminal) cmdAjuda() {
-	fmt.Println("Comandos disponiveis:")
+	fmt.Println("Comandos disponiveis (V2):")
 	fmt.Println("  criar <nome>         Criar jogador")
 	fmt.Println("  novo                 Criar nova partida")
 	fmt.Println("  listar               Listar partidas disponiveis")
 	fmt.Println("  entrar <gameId>      Entrar em uma partida")
-	fmt.Println("  jogar <codigo>       Jogar carta (ex: R3, B5, GS, GX, BY)")
+	fmt.Println("  jogar <codigo>       Jogar carta (ex: R3, B5, GS, GX)")
 	fmt.Println("  comprar              Comprar carta do monte")
-	fmt.Println("  uno                  Chamar UNO")
+	fmt.Println("  uno                  Chamar UNO (opcional, sem penalidade na V2)")
 	fmt.Println("  bater                Bater (vencer)")
 	fmt.Println("  estado               Ver estado da partida")
 	fmt.Println("  eventos [desde]      Ver eventos da partida")
@@ -374,11 +378,15 @@ func (t *Terminal) cmdAjuda() {
 	fmt.Println("  ajuda                Mostrar esta ajuda")
 	fmt.Println("  sair                 Sair do cliente")
 	fmt.Println()
-	fmt.Println("Codigos de carta:")
+	fmt.Println("Codigos de carta (V2: sem +2 e +4):")
 	fmt.Println("  R=VERMELHO B=AZUL G=VERDE Y=AMARELO")
 	fmt.Println("  Numeros: R0-R9, B0-B9, G0-G9, Y0-Y9")
 	fmt.Println("  Especiais: RS/BS/GS/YS=Pular  RR/BR/GR/YR=Inverter")
-	fmt.Println("             RZ/BZ/GZ/YZ=+2  GX/BX/RX/YX=Coringa")
-	fmt.Println("             RY/BY/GY/YY=+4")
-	fmt.Println("  Para Coringa/+4, a cor no codigo indica a cor escolhida (ex: GX = Coringa verde)")
+	fmt.Println("             GX/BX/RX/YX=Coringa (cor no codigo = cor escolhida)")
+	fmt.Println()
+	fmt.Println("Failover automatico:")
+	fmt.Println("  O cliente tenta o primeiro servidor (lider). Se nao responder,")
+	fmt.Println("  tenta o proximo da lista. Em caso de SERVIDOR_NAO_E_LIDER,")
+	fmt.Println("  redireciona automaticamente para o endereco indicado na resposta.")
+	fmt.Println("  Para multiplos servidores: --server http://host1,http://host2")
 }

@@ -63,7 +63,7 @@ func TestGetServidor(t *testing.T) {
 	if dados["servidorId"] != "srv-test" {
 		t.Errorf("servidorId errado: %v", dados["servidorId"])
 	}
-	if dados["versaoContrato"] != "1.1" {
+	if dados["versaoContrato"] != "2.0" {
 		t.Errorf("versaoContrato errada: %v", dados["versaoContrato"])
 	}
 }
@@ -153,6 +153,10 @@ func TestEntrarNaPartida(t *testing.T) {
 	if dados["quantidadeJogadores"].(float64) != 2 {
 		t.Errorf("quantidadeJogadores errado: %v", dados["quantidadeJogadores"])
 	}
+	// V2: ao entrar o segundo jogador a partida inicia automaticamente.
+	if dados["status"] != "EM_ANDAMENTO" {
+		t.Errorf("status devia ser EM_ANDAMENTO (auto-start com 2), veio %v", dados["status"])
+	}
 }
 
 func TestEntrarPartidaInexistente(t *testing.T) {
@@ -194,14 +198,13 @@ func TestGetEstadoSemJogadorId(t *testing.T) {
 func TestJogarCartaFluxoCompleto(t *testing.T) {
 	r, _, _ := setupTestServer()
 
-	nomes := []string{"Ana", "Bruno", "Carla", "Daniel"}
+	// V2: 2 jogadores.
+	nomes := []string{"Ana", "Bruno"}
 	for _, nome := range nomes {
 		doRequest(t, r, "POST", "/jogadores", map[string]string{"nome": nome})
 	}
 	doRequest(t, r, "POST", "/jogos", map[string]string{"jogadorId": "jogador-001"})
 	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-002"})
-	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-003"})
-	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-004"})
 
 	w := doRequest(t, r, "GET", "/jogos/jogo-001/estado?jogadorId=jogador-001", nil)
 	resp := parseResp(t, w)
@@ -224,14 +227,12 @@ func TestJogarCartaFluxoCompleto(t *testing.T) {
 func TestComprarCartaEndpoint(t *testing.T) {
 	r, _, _ := setupTestServer()
 
-	nomes := []string{"Ana", "Bruno", "Carla", "Daniel"}
+	nomes := []string{"Ana", "Bruno"}
 	for _, nome := range nomes {
 		doRequest(t, r, "POST", "/jogadores", map[string]string{"nome": nome})
 	}
 	doRequest(t, r, "POST", "/jogos", map[string]string{"jogadorId": "jogador-001"})
 	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-002"})
-	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-003"})
-	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-004"})
 
 	w := doRequest(t, r, "POST", "/jogos/jogo-001/comprar", map[string]string{"jogadorId": "jogador-001"})
 	resp := parseResp(t, w)
@@ -249,17 +250,15 @@ func TestComprarCartaEndpoint(t *testing.T) {
 	}
 }
 
-func TestUnoEndpoint(t *testing.T) {
+func TestUnoEndpointV2(t *testing.T) {
 	r, _, pm := setupTestServer()
 
-	nomes := []string{"Ana", "Bruno", "Carla", "Daniel"}
+	nomes := []string{"Ana", "Bruno"}
 	for _, nome := range nomes {
 		doRequest(t, r, "POST", "/jogadores", map[string]string{"nome": nome})
 	}
 	doRequest(t, r, "POST", "/jogos", map[string]string{"jogadorId": "jogador-001"})
 	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-002"})
-	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-003"})
-	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-004"})
 
 	jogo, _ := pm.ObterJogo("jogo-001")
 	jogo.RLock()
@@ -276,6 +275,7 @@ func TestUnoEndpoint(t *testing.T) {
 	w := doRequest(t, r, "POST", "/jogos/jogo-001/uno", map[string]string{"jogadorId": vez})
 	resp := parseResp(t, w)
 	dados := resp["dados"].(map[string]interface{})
+	// V2: quantidadeCartas reflete a mão real (sem validação rígida).
 	if dados["quantidadeCartas"].(float64) != 1 {
 		t.Errorf("quantidadeCartas devia ser 1, veio %v", dados["quantidadeCartas"])
 	}
@@ -284,14 +284,12 @@ func TestUnoEndpoint(t *testing.T) {
 func TestBaterEndpoint(t *testing.T) {
 	r, _, pm := setupTestServer()
 
-	nomes := []string{"Ana", "Bruno", "Carla", "Daniel"}
+	nomes := []string{"Ana", "Bruno"}
 	for _, nome := range nomes {
 		doRequest(t, r, "POST", "/jogadores", map[string]string{"nome": nome})
 	}
 	doRequest(t, r, "POST", "/jogos", map[string]string{"jogadorId": "jogador-001"})
 	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-002"})
-	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-003"})
-	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-004"})
 
 	jogo, _ := pm.ObterJogo("jogo-001")
 	jogo.RLock()
@@ -331,14 +329,12 @@ func TestEventosEndpoint(t *testing.T) {
 func TestEventosComDesde(t *testing.T) {
 	r, _, _ := setupTestServer()
 
-	nomes := []string{"Ana", "Bruno", "Carla", "Daniel"}
+	nomes := []string{"Ana", "Bruno"}
 	for _, nome := range nomes {
 		doRequest(t, r, "POST", "/jogadores", map[string]string{"nome": nome})
 	}
 	doRequest(t, r, "POST", "/jogos", map[string]string{"jogadorId": "jogador-001"})
 	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-002"})
-	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-003"})
-	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-004"})
 
 	w := doRequest(t, r, "GET", "/jogos/jogo-001/eventos?desde=2", nil)
 	resp := parseResp(t, w)
@@ -374,19 +370,18 @@ func TestJogarCartaSemJogador(t *testing.T) {
 	}
 }
 
-func TestEntrarPartidaCheia(t *testing.T) {
+func TestEntrarPartidaCheiaV2(t *testing.T) {
 	r, _, _ := setupTestServer()
 
-	nomes := []string{"Ana", "Bruno", "Carla", "Daniel", "Extra"}
+	// V2: 2 jogadores. O terceiro deve receber JOGO_JA_INICIADO.
+	nomes := []string{"Ana", "Bruno", "Carla"}
 	for _, nome := range nomes {
 		doRequest(t, r, "POST", "/jogadores", map[string]string{"nome": nome})
 	}
 	doRequest(t, r, "POST", "/jogos", map[string]string{"jogadorId": "jogador-001"})
 	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-002"})
-	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-003"})
-	doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-004"})
 
-	w := doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-005"})
+	w := doRequest(t, r, "POST", "/jogos/jogo-001/entrar", map[string]string{"jogadorId": "jogador-003"})
 	resp := parseResp(t, w)
 	erro := resp["erro"].(map[string]interface{})
 	codigo := erro["codigo"].(string)
@@ -407,5 +402,9 @@ func TestLiderRedirect(t *testing.T) {
 	erro := resp["erro"].(map[string]interface{})
 	if erro["codigo"] != "SERVIDOR_NAO_E_LIDER" {
 		t.Errorf("esperado SERVIDOR_NAO_E_LIDER, veio %v", erro["codigo"])
+	}
+	// V2: o erro deve incluir o enderecoLider para que o cliente redirecione.
+	if erro["enderecoLider"] == nil || erro["enderecoLider"] == "" {
+		t.Error("V2: erro SERVIDOR_NAO_E_LIDER deve incluir enderecoLider para failover do cliente")
 	}
 }

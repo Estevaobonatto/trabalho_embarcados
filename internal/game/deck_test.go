@@ -14,8 +14,9 @@ func TestCriarBaralho(t *testing.T) {
 	pm := setupManager()
 	baralho := pm.CriarBaralho()
 
-	if len(baralho) != 108 {
-		t.Fatalf("baralho deve ter 108 cartas, tem %d", len(baralho))
+	// V2: baralho reduzido (sem MAIS_DOIS e MAIS_QUATRO): 96 cartas.
+	if len(baralho) != 96 {
+		t.Fatalf("baralho V2 deve ter 96 cartas, tem %d", len(baralho))
 	}
 
 	contagem := make(map[model.TipoCarta]int)
@@ -35,14 +36,14 @@ func TestCriarBaralho(t *testing.T) {
 	if contagem[model.INVERTER] != 8 {
 		t.Errorf("inverter: esperado 8, tem %d", contagem[model.INVERTER])
 	}
-	if contagem[model.MAIS_DOIS] != 8 {
-		t.Errorf("+2: esperado 8, tem %d", contagem[model.MAIS_DOIS])
+	if contagem[model.MAIS_DOIS] != 0 {
+		t.Errorf("+2: esperado 0 (removido na V2), tem %d", contagem[model.MAIS_DOIS])
 	}
 	if contagem[model.CORINGA] != 4 {
 		t.Errorf("coringa: esperado 4, tem %d", contagem[model.CORINGA])
 	}
-	if contagem[model.MAIS_QUATRO] != 4 {
-		t.Errorf("+4: esperado 4, tem %d", contagem[model.MAIS_QUATRO])
+	if contagem[model.MAIS_QUATRO] != 0 {
+		t.Errorf("+4: esperado 0 (removido na V2), tem %d", contagem[model.MAIS_QUATRO])
 	}
 
 	coresPretas := 0
@@ -51,8 +52,8 @@ func TestCriarBaralho(t *testing.T) {
 			coresPretas++
 		}
 	}
-	if coresPretas != 8 {
-		t.Errorf("cartas PRETO: esperado 8, tem %d", coresPretas)
+	if coresPretas != 4 {
+		t.Errorf("cartas PRETO: esperado 4 (apenas coringa), tem %d", coresPretas)
 	}
 }
 
@@ -125,8 +126,9 @@ func TestReciclarDescarte(t *testing.T) {
 	if len(jogo.MonteDescarte) != 1 {
 		t.Errorf("descarte devia ter 1 carta (topo), tem %d", len(jogo.MonteDescarte))
 	}
-	if len(jogo.MonteCompra)+len(jogo.MonteDescarte) != 107 {
-		t.Errorf("total de cartas devia ser 107, tem %d", len(jogo.MonteCompra)+len(jogo.MonteDescarte))
+	// V2: baralho tem 96 cartas, após mover 1 para descarte restam 95.
+	if len(jogo.MonteCompra)+len(jogo.MonteDescarte) != 95 {
+		t.Errorf("total de cartas devia ser 95, tem %d", len(jogo.MonteCompra)+len(jogo.MonteDescarte))
 	}
 }
 

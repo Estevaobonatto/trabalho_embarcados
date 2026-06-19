@@ -281,7 +281,8 @@ func (pm *PartidaManager) JogarCarta(gameId, jogadorId, cartaId string, corEscol
 		return nil, err
 	}
 
-	pm.verificarPenalidadesUno(jogo)
+	// V2: penalidade UNO removida (Estrutura V2 — "Chamar UNO e levar penalidade" é opcional).
+	// Mantemos o estado `chamouUno` apenas para fins de exibição no estado público.
 
 	jogador.RemoverCarta(cartaId)
 	jogador.ChamouUno = false
@@ -337,7 +338,7 @@ func (pm *PartidaManager) ComprarCarta(gameId, jogadorId string) (*ResultadoComp
 		return nil, NovoErro(model.NAO_E_SUA_VEZ)
 	}
 
-	pm.verificarPenalidadesUno(jogo)
+	// V2: penalidade UNO removida.
 
 	carta, err := ComprarCartaDoMonte(jogo)
 	if err != nil {
@@ -363,7 +364,9 @@ func (pm *PartidaManager) ComprarCarta(gameId, jogadorId string) (*ResultadoComp
 }
 
 // ChamarUno registra que o jogador chamou UNO.
-// Só é válido se o jogador tiver exatamente 1 carta na mão.
+// Conforme Estrutura V2: chamar UNO é opcional e não há penalidade. O endpoint
+// permanece para compatibilidade com o contrato, mas a chamada é sempre aceita
+// (exceto se o jogo já estiver finalizado).
 func (pm *PartidaManager) ChamarUno(gameId, jogadorId string) error {
 	jogo, jogador, err := pm.obterJogoEJogador(gameId, jogadorId)
 	if err != nil {
@@ -375,9 +378,6 @@ func (pm *PartidaManager) ChamarUno(gameId, jogadorId string) error {
 
 	if jogo.EstaFinalizado() {
 		return NovoErro(model.JOGO_FINALIZADO)
-	}
-	if len(jogador.Mao) != 1 {
-		return NovoErro(model.JOGADOR_NAO_ESTA_COM_UMA_CARTA)
 	}
 
 	jogador.ChamouUno = true
@@ -615,6 +615,8 @@ func (pm *PartidaManager) obterJogoEJogador(gameId, jogadorId string) (*model.Jo
 }
 
 // aplicarEfeitoCarta aplica o efeito da carta jogada e retorna quantos jogadores pular.
+// Conforme Estrutura V2: apenas NUMERICA, PULAR, INVERTER e CORINGA têm efeito.
+// As cartas MAIS_DOIS e MAIS_QUATRO não fazem parte do baralho V2.
 func (pm *PartidaManager) aplicarEfeitoCarta(jogo *model.Jogo, carta *model.Carta) int {
 	switch carta.Tipo {
 	case model.PULAR:
@@ -626,26 +628,18 @@ func (pm *PartidaManager) aplicarEfeitoCarta(jogo *model.Jogo, carta *model.Cart
 		} else {
 			jogo.Sentido = model.HORARIO
 		}
+		// Com 2 jogadores (V2), INVERTER funciona como PULAR: o oponente perde a vez.
+		// A carta já é a do jogadorDaVez, e o sentido é trocado.
+		// O próximo jogador no novo sentido é o próprio jogador atual.
 		if len(jogo.Jogadores) == 2 {
 			return 1
 		}
 		return 0
 
-	case model.MAIS_DOIS:
-		prox := pm.calcularProximoJogador(jogo, 0)
-		if jog := jogo.BuscarJogador(prox); jog != nil {
-			cartas, _ := ComprarMultiplasCartas(jogo, 2)
-			jog.Mao = append(jog.Mao, cartas...)
-		}
-		return 1
-
-	case model.MAIS_QUATRO:
-		prox := pm.calcularProximoJogador(jogo, 0)
-		if jog := jogo.BuscarJogador(prox); jog != nil {
-			cartas, _ := ComprarMultiplasCartas(jogo, 4)
-			jog.Mao = append(jog.Mao, cartas...)
-		}
-		return 1
+	case model.CORINGA, model.MAIS_DOIS, model.MAIS_QUATRO:
+		// CORINGA (V2): só muda a cor, sem efeito de pulo.
+		// MAIS_DOIS/MAIS_QUATRO: não fazem parte do baralho V2 (ignorados).
+		return 0
 
 	default:
 		return 0
@@ -676,24 +670,11 @@ func (pm *PartidaManager) calcularProximoJogador(jogo *model.Jogo, pulos int) st
 	return jogo.Jogadores[idx].JogadorId
 }
 
-// verificarPenalidadesUno verifica jogadores que deveriam ter chamado UNO e não chamaram.
-// Aplica penalidade de +2 cartas conforme Seção 8 do contrato.
+// verificarPenalidadesUno é mantido como stub para compatibilidade.
+// Conforme Estrutura V2, a penalidade de UNO foi removida (era opcional).
+// O estado `chamouUno` ainda é exibido publicamente mas não há consequência.
 func (pm *PartidaManager) verificarPenalidadesUno(jogo *model.Jogo) {
-	for _, jog := range jogo.Jogadores {
-		if jog.JogadorId != jogo.JogadorDaVez && len(jog.Mao) == 1 && !jog.ChamouUno {
-			cartas, err := ComprarMultiplasCartas(jogo, 2)
-			if err != nil {
-				return
-			}
-			jog.Mao = append(jog.Mao, cartas...)
-			jog.ChamouUno = false
-
-			versao := jogo.IncrementarVersao()
-			evento := model.NovoEvento(len(jogo.Eventos)+1, model.PENALIDADE_UNO, jog.JogadorId,
-				fmt.Sprintf("%s não chamou UNO e recebeu +2 cartas", jog.Nome), versao)
-			jogo.Eventos = append(jogo.Eventos, evento)
-		}
-	}
+	_ = jogo
 }
 
 func (pm *PartidaManager) ExportarSnapshot(gameId string) (*model.JogoSnapshot, error) {

@@ -33,12 +33,21 @@ func RecoveryMiddleware() gin.HandlerFunc {
 	}
 }
 
+// LiderMiddleware bloqueia escritas em servidores que não são o líder do cluster.
+// Conforme Estrutura V2, o cliente recebe o endereço do líder no campo
+// "enderecoLider" da resposta de erro para poder redirecionar.
 func LiderMiddleware(h *Handler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if h.Cluster != nil && h.Cluster.HasPeers() && !h.Cluster.IsLeader() {
 			enderecoLider := h.Cluster.GetLiderEndereco()
-			resp := model.NovaRespostaErro(model.SERVIDOR_NAO_E_LIDER,
-				"Este servidor nao e o lider. Lider: "+enderecoLider)
+			resp := gin.H{
+				"sucesso": false,
+				"erro": gin.H{
+					"codigo":        model.SERVIDOR_NAO_E_LIDER,
+					"mensagem":      "Este servidor nao e o lider. Redirecione para: " + enderecoLider,
+					"enderecoLider": enderecoLider,
+				},
+			}
 			c.AbortWithStatusJSON(model.StatusHTTP(model.SERVIDOR_NAO_E_LIDER), resp)
 			return
 		}

@@ -126,12 +126,31 @@ func (h *Handler) ChamarUno(c *gin.Context) {
 		return
 	}
 
+	// V2: a chamada é sempre aceita (sem penalidade). A quantidadeCartas é consultada
+	// diretamente do estado para refletir a mão atual.
+	quantidade := h.quantidadeCartasAtual(gameId, req.JogadorId)
+
 	dados := gin.H{
 		"jogadorId":        req.JogadorId,
-		"quantidadeCartas": 1,
+		"quantidadeCartas": quantidade,
 	}
 	resp := model.NovaRespostaSucesso("UNO chamado com sucesso", dados)
 	c.JSON(http.StatusOK, resp)
+}
+
+// quantidadeCartasAtual retorna a quantidade de cartas na mão do jogador no jogo.
+// Usado pelo endpoint /uno para informar o estado real (V2 não exige 1 carta).
+func (h *Handler) quantidadeCartasAtual(gameId, jogadorId string) int {
+	jogo, err := h.PM.ObterJogo(gameId)
+	if err != nil {
+		return 0
+	}
+	jogo.RLock()
+	defer jogo.RUnlock()
+	if jog := jogo.BuscarJogador(jogadorId); jog != nil {
+		return len(jog.Mao)
+	}
+	return 0
 }
 
 type baterRequest struct {

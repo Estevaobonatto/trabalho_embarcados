@@ -157,13 +157,13 @@ func (cs *ClusterState) GetServidorInfo() map[string]interface{} {
 	cs.mu.RLock()
 	defer cs.mu.RUnlock()
 	return map[string]interface{}{
-		"servidorId":         cs.ServidorID,
-		"nome":               "Servidor UNO",
-		"versaoContrato":     "1.1",
-		"status":             "ATIVO",
-		"lider":              cs.IsLider,
-		"enderecoLider":      cs.EnderecoLider,
-		"versaoEstadoAtual":  cs.PM.MaxVersaoEstado(),
+		"servidorId":        cs.ServidorID,
+		"nome":              "Servidor UNO",
+		"versaoContrato":    "2.0",
+		"status":            "ATIVO",
+		"lider":             cs.IsLider,
+		"enderecoLider":     cs.EnderecoLider,
+		"versaoEstadoAtual": cs.PM.MaxVersaoEstado(),
 	}
 }
 

@@ -8,19 +8,20 @@ import (
 	"uno-api/internal/model"
 )
 
-// CriarBaralho gera as 108 cartas do baralho UNO padrão.
-// Composição:
+// CriarBaralho gera as cartas do baralho conforme Estrutura V2.
+// Composição (V2 - reduzido: sem +2, sem +4, sem UNO):
 //   - 1× "0" de cada cor (4)
 //   - 2× cada número de 1 a 9 de cada cor (72)
 //   - 2× PULAR de cada cor (8)
 //   - 2× INVERTER de cada cor (8)
-//   - 2× MAIS_DOIS de cada cor (8)
 //   - 4× CORINGA (PRETO) (4)
-//   - 4× MAIS_QUATRO (PRETO) (4)
 //
-// Total: 108 cartas. Os IDs são gerados usando o contadorCarta do PartidaManager.
+// Total: 96 cartas. Os IDs são gerados usando o contadorCarta do PartidaManager.
+//
+// Os tipos MAIS_DOIS e MAIS_QUATRO continuam no enum (compatibilidade de contrato),
+// mas não são gerados neste baralho (Estrutura V2 — opcionais).
 func (pm *PartidaManager) CriarBaralho() []model.Carta {
-	cartas := make([]model.Carta, 0, 108)
+	cartas := make([]model.Carta, 0, 96)
 	cores := []model.Cor{model.AMARELO, model.AZUL, model.VERDE, model.VERMELHO}
 
 	for _, cor := range cores {
@@ -38,17 +39,10 @@ func (pm *PartidaManager) CriarBaralho() []model.Carta {
 
 		cartas = append(cartas, pm.novaCarta(cor, model.INVERTER, nil))
 		cartas = append(cartas, pm.novaCarta(cor, model.INVERTER, nil))
-
-		cartas = append(cartas, pm.novaCarta(cor, model.MAIS_DOIS, nil))
-		cartas = append(cartas, pm.novaCarta(cor, model.MAIS_DOIS, nil))
 	}
 
 	for range 4 {
 		cartas = append(cartas, pm.novaCarta(model.PRETO, model.CORINGA, nil))
-	}
-
-	for range 4 {
-		cartas = append(cartas, pm.novaCarta(model.PRETO, model.MAIS_QUATRO, nil))
 	}
 
 	return cartas

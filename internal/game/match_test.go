@@ -103,9 +103,9 @@ func formatSeq(n int) string {
 	return "0" + string(rune('0'+n/10)) + string(rune('0'+n%10))
 }
 
-func TestIniciarPartidaAutomatico4Jogadores(t *testing.T) {
+func TestIniciarPartidaAutomatico2Jogadores(t *testing.T) {
 	pm := setupManager()
-	nomes := []string{"Ana", "Bruno", "Carla", "Daniel"}
+	nomes := []string{"Ana", "Bruno"}
 	var jogo *model.Jogo
 	for i, nome := range nomes {
 		j, _ := pm.CriarJogador(nome)
@@ -116,8 +116,9 @@ func TestIniciarPartidaAutomatico4Jogadores(t *testing.T) {
 		}
 	}
 
+	// V2: partida inicia automaticamente com 2 jogadores.
 	if jogo.Status != model.EM_ANDAMENTO {
-		t.Error("partida devia ter iniciado automaticamente com 4 jogadores")
+		t.Error("partida V2 devia ter iniciado automaticamente com 2 jogadores")
 	}
 	for _, jog := range jogo.Jogadores {
 		if len(jog.Mao) != 7 {
@@ -134,17 +135,17 @@ func TestIniciarPartidaAutomatico4Jogadores(t *testing.T) {
 
 func TestEntrarPartidaCheia(t *testing.T) {
 	pm := setupManager()
-	gid := setupPartidaComJogadores(t, pm, 4)
+	gid := setupPartidaComJogadores(t, pm, 2)
 	pm.CriarJogador("Extra")
-	_, err := pm.EntrarNaPartida(gid, "jogador-005")
+	_, err := pm.EntrarNaPartida(gid, "jogador-003")
 	if err == nil {
-		t.Error("devia rejeitar entrada em partida cheia/iniciada")
+		t.Error("devia rejeitar entrada em partida cheia/iniciada (V2 = 2 jogadores)")
 	}
 }
 
 func TestJogarCartaForaDaVez(t *testing.T) {
 	pm := setupManager()
-	gid := setupPartidaComJogadores(t, pm, 4)
+	gid := setupPartidaComJogadores(t, pm, 2)
 
 	jogo, _ := pm.ObterJogo(gid)
 	jogo.RLock()
@@ -167,7 +168,7 @@ func TestJogarCartaForaDaVez(t *testing.T) {
 
 func TestComprarCarta(t *testing.T) {
 	pm := setupManager()
-	gid := setupPartidaComJogadores(t, pm, 4)
+	gid := setupPartidaComJogadores(t, pm, 2)
 
 	jogo, _ := pm.ObterJogo(gid)
 	jogo.RLock()
@@ -194,44 +195,41 @@ func TestComprarCarta(t *testing.T) {
 	}
 }
 
-func TestChamarUnoComUmaCarta(t *testing.T) {
+func TestChamarUnoSempreAceitaV2(t *testing.T) {
 	pm := setupManager()
-	gid := setupPartidaComJogadores(t, pm, 4)
+	gid := setupPartidaComJogadores(t, pm, 2)
 	jogo, _ := pm.ObterJogo(gid)
 	jogo.RLock()
 	vez := jogo.JogadorDaVez
 	jogador := jogo.BuscarJogador(vez)
 	jogo.RUnlock()
 
+	// V2: chamar UNO é opcional e sempre aceito, mesmo com várias cartas.
 	jogo.Lock()
 	for len(jogador.Mao) > 1 {
 		jogador.Mao = jogador.Mao[:len(jogador.Mao)-1]
 	}
 	jogo.Unlock()
 
-	err := pm.ChamarUno(gid, vez)
-	if err != nil {
-		t.Errorf("devia poder chamar UNO com 1 carta: %v", err)
+	if err := pm.ChamarUno(gid, vez); err != nil {
+		t.Errorf("V2: devia poder chamar UNO com 1 carta: %v", err)
 	}
-}
 
-func TestChamarUnoComMaisDeUmaCarta(t *testing.T) {
-	pm := setupManager()
-	gid := setupPartidaComJogadores(t, pm, 4)
-	jogo, _ := pm.ObterJogo(gid)
-	jogo.RLock()
-	vez := jogo.JogadorDaVez
-	jogo.RUnlock()
-
-	err := pm.ChamarUno(gid, vez)
-	if err == nil {
-		t.Error("nao devia chamar UNO com mais de 1 carta")
+	// V2: também aceita com várias cartas (sem penalidade).
+	pm2 := setupManager()
+	gid2 := setupPartidaComJogadores(t, pm2, 2)
+	jogo2, _ := pm2.ObterJogo(gid2)
+	jogo2.RLock()
+	vez2 := jogo2.JogadorDaVez
+	jogo2.RUnlock()
+	if err := pm2.ChamarUno(gid2, vez2); err != nil {
+		t.Errorf("V2: UNO deve ser aceito com várias cartas (sem penalidade): %v", err)
 	}
 }
 
 func TestBaterComCartas(t *testing.T) {
 	pm := setupManager()
-	gid := setupPartidaComJogadores(t, pm, 4)
+	gid := setupPartidaComJogadores(t, pm, 2)
 	jogo, _ := pm.ObterJogo(gid)
 	jogo.RLock()
 	vez := jogo.JogadorDaVez
@@ -245,7 +243,7 @@ func TestBaterComCartas(t *testing.T) {
 
 func TestBaterSemCartas(t *testing.T) {
 	pm := setupManager()
-	gid := setupPartidaComJogadores(t, pm, 4)
+	gid := setupPartidaComJogadores(t, pm, 2)
 	jogo, _ := pm.ObterJogo(gid)
 	jogo.RLock()
 	vez := jogo.JogadorDaVez
@@ -274,7 +272,8 @@ func TestInverterCom2Jogadores(t *testing.T) {
 	pm.CriarJogador("Bruno")
 	jogo, _ := pm.CriarPartida("jogador-001")
 	pm.EntrarNaPartida(jogo.GameId, "jogador-002")
-	pm.IniciarPartida(jogo.GameId)
+	// V2: não precisa chamar IniciarPartida — auto-start com 2 jogadores.
+	// (aqui já inicia automaticamente)
 
 	jogo.RLock()
 	if len(jogo.Jogadores) != 2 {
@@ -296,6 +295,7 @@ func TestInverterCom2Jogadores(t *testing.T) {
 	if err != nil {
 		t.Fatalf("jogar inverter devia funcionar: %v", err)
 	}
+	// V2: com 2 jogadores, INVERTER funciona como PULAR (mesmo jogador joga de novo).
 	if res.ProximoJogador != vez {
 		t.Error("com 2 jogadores, inverter devia pular o oponente (proximo = mesmo jogador)")
 	}
@@ -321,7 +321,8 @@ func TestListarJogos(t *testing.T) {
 	if len(jogos) != 1 {
 		t.Errorf("devia ter 1 jogo, tem %d", len(jogos))
 	}
-	if jogos[0].MaxJogadores != 4 {
-		t.Errorf("maxJogadores devia ser 4")
+	// V2: maxJogadores = 2.
+	if jogos[0].MaxJogadores != 2 {
+		t.Errorf("maxJogadores V2 devia ser 2, veio %d", jogos[0].MaxJogadores)
 	}
 }

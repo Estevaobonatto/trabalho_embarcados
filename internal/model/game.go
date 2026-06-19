@@ -21,7 +21,8 @@ const (
 )
 
 // MaxJogadoresPorPartida é o número máximo de jogadores por partida.
-const MaxJogadoresPorPartida = 4
+// Conforme Estrutura V2: partidas são fixas em 2 jogadores.
+const MaxJogadoresPorPartida = 2
 
 // CartasIniciaisPorJogador é o número de cartas distribuídas no início da partida.
 const CartasIniciaisPorJogador = 7
