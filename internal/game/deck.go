@@ -9,7 +9,6 @@ import (
 )
 
 // CriarBaralho gera as cartas do baralho conforme Estrutura V2.
-// Composição (V2 - reduzido: sem +2, sem +4, sem UNO):
 //   - 1× "0" de cada cor (4)
 //   - 2× cada número de 1 a 9 de cada cor (72)
 //   - 2× PULAR de cada cor (8)
