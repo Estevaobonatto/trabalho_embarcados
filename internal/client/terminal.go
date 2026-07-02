@@ -6,19 +6,24 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
 type Terminal struct {
-	API     *APIClient
-	Session *Session
-	scanner *bufio.Scanner
+	API          *APIClient
+	Session      *Session
+	scanner      *bufio.Scanner
+	printMu      sync.Mutex
+	lastEventSeq int
 }
 
 func NewTerminal(api *APIClient) *Terminal {
 	return &Terminal{
-		API:     api,
-		Session: NewSession(api),
-		scanner: bufio.NewScanner(os.Stdin),
+		API:          api,
+		Session:      NewSession(api),
+		scanner:      bufio.NewScanner(os.Stdin),
+		lastEventSeq: 0,
 	}
 }
 
@@ -26,6 +31,9 @@ func (t *Terminal) Run() {
 	t.exibirCabecalho()
 	fmt.Println("Digite 'ajuda' para ver os comandos disponiveis.")
 	fmt.Println()
+
+	// Inicia o poller de eventos em background para atualizar estado automaticamente.
+	go t.eventPoller()
 
 	for {
 		fmt.Print("uno> ")
@@ -37,6 +45,44 @@ func (t *Terminal) Run() {
 			continue
 		}
 		t.executarComando(linha)
+	}
+}
+
+func (t *Terminal) eventPoller() {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		if !t.Session.EstaEmPartida() {
+			continue
+		}
+
+		eventos, err := t.API.ObterEventos(t.Session.GameId, t.lastEventSeq+1)
+		if err != nil {
+			// ignorar erros temporarios
+			continue
+		}
+		if len(eventos) == 0 {
+			continue
+		}
+
+		// Atualiza ultima sequencia
+		maxSeq := t.lastEventSeq
+		for _, ev := range eventos {
+			if ev.Sequencia > maxSeq {
+				maxSeq = ev.Sequencia
+			}
+		}
+		t.lastEventSeq = maxSeq
+
+		// Trava impressao para evitar intercalamento com entrada do usuario
+		t.printMu.Lock()
+		fmt.Println()
+		for _, ev := range eventos {
+			fmt.Printf("  #%d [%s] %s: %s\n", ev.Sequencia, ev.Tipo, ev.JogadorId, ev.Mensagem)
+		}
+		// Exibe estado atualizado
+		t.exibirEstado()
+		t.printMu.Unlock()
 	}
 }
 
@@ -127,6 +173,7 @@ func (t *Terminal) cmdCriarJogo() {
 		return
 	}
 	t.Session.GameId = jogo.GameId
+	t.lastEventSeq = 0
 	fmt.Printf("Partida criada: %s (status: %s)\n", jogo.GameId, jogo.Status)
 	fmt.Println("Compartilhe o gameId com outros jogadores para entrarem.")
 }
@@ -164,6 +211,7 @@ func (t *Terminal) cmdEntrar(args []string) {
 		return
 	}
 	t.Session.GameId = info.GameId
+	t.lastEventSeq = 0
 	fmt.Printf("Entrou na partida %s | status: %s | jogadores: %d\n",
 		info.GameId, info.Status, info.QuantidadeJogadores)
 	if info.Status == "EM_ANDAMENTO" {
@@ -245,6 +293,7 @@ func (t *Terminal) cmdBater() {
 	}
 	fmt.Printf("VENCEU! Vencedor: %s | Status: %s\n", res.Vencedor, res.Status)
 	t.Session.GameId = ""
+	t.lastEventSeq = 0
 }
 
 func (t *Terminal) cmdEstado() {
